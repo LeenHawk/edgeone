@@ -1,4 +1,4 @@
-module github.com/caddy-dns/edgeone
+module github.com/LeenHawk/edgeone
 
 go 1.24
 
