@@ -1,60 +1,62 @@
-DEVELOPER INSTRUCTIONS:
-=======================
+# Quick Start Guide
 
-- Update module name in go.mod
-- Update dependencies to latest versions (**EXCEPT `caddy/v2` ITSELF**)
-- Update name and year in license
-- Customize configuration and Caddyfile parsing
-- Update godocs / comments (especially provider name and nuances)
-- Update README and remove this section
+## 1. Prerequisites
 
-Thank you for maintaining your Caddy plugin!
+- Go 1.21+ installed
+- Tencent Cloud account with EdgeOne service enabled
+- Domain configured in EdgeOne
 
-_Remove this section before publishing._
+## 2. Get API Credentials
 
----
+1. Visit [Tencent Cloud API Keys](https://console.tencentcloud.com/cam/capi)
+2. Create a new API key pair
+3. Note down your `Secret ID` and `Secret Key`
 
-\<PROVIDER\> module for Caddy
-===========================
+## 3. Set Environment Variables
 
-This package contains a DNS provider module for [Caddy](https://github.com/caddyserver/caddy). It can be used to manage DNS records with \<PROVIDER\>.
-
-## Caddy module name
-
-```
-dns.providers.provider_name
+```bash
+export EDGEONE_SECRET_ID="your_secret_id_here"
+export EDGEONE_SECRET_KEY="your_secret_key_here"
 ```
 
-## Config examples
+## 4. Build Caddy with EdgeOne Plugin
 
-To use this module for the ACME DNS challenge, [configure the ACME issuer in your Caddy JSON](https://caddyserver.com/docs/json/apps/tls/automation/policies/issuer/acme/) like so:
+```bash
+# Using the build script
+./build.sh
 
-```json
+# Or manually with xcaddy
+xcaddy build --with github.com/caddy-dns/edgeone
+```
+
+## 5. Create Configuration
+
+Create a `Caddyfile`:
+
+```caddyfile
 {
-	"module": "acme",
-	"challenges": {
-		"dns": {
-			"provider": {
-				"name": "provider_name",
-				"api_token": "YOUR_PROVIDER_API_TOKEN"
-			}
-		}
-	}
+    acme_dns edgeone {
+        secret_id {env.EDGEONE_SECRET_ID}
+        secret_key {env.EDGEONE_SECRET_KEY}
+    }
+}
+
+your-domain.com {
+    respond "Hello from Caddy with EdgeOne DNS!"
 }
 ```
 
-or with the Caddyfile:
+## 6. Run Caddy
 
-```
-# globally
-{
-	acme_dns provider_name ...
-}
+```bash
+./caddy run --config Caddyfile
 ```
 
-```
-# one site
-tls {
-	dns provider_name ...
-}
-```
+That's it! Caddy will automatically obtain SSL certificates using the EdgeOne DNS challenge.
+
+## Troubleshooting
+
+- Ensure your domain is properly configured in EdgeOne
+- Check that your API credentials have DNS management permissions
+- Verify your environment variables are set correctly
+- Check Caddy logs for any DNS challenge errors

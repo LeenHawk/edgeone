@@ -1,15 +1,13 @@
-package template
+package edgeone
 
 import (
-	"fmt"
-
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	libdnstemplate "github.com/libdns/template"
+	"github.com/libdns/edgeone"
 )
 
-// Provider lets Caddy read and manipulate DNS records hosted by this DNS provider.
-type Provider struct{ *libdnstemplate.Provider }
+// Provider wraps the provider implementation as a Caddy module.
+type Provider struct{ *edgeone.Provider }
 
 func init() {
 	caddy.RegisterModule(Provider{})
@@ -18,42 +16,60 @@ func init() {
 // CaddyModule returns the Caddy module information.
 func (Provider) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "dns.providers.template",
-		New: func() caddy.Module { return &Provider{new(libdnstemplate.Provider)} },
+		ID:  "dns.providers.edgeone",
+		New: func() caddy.Module { return &Provider{new(edgeone.Provider)} },
 	}
 }
 
-// TODO: This is just an example. Useful to allow env variable placeholders; update accordingly.
-// Provision sets up the module. Implements caddy.Provisioner.
+// Before using the provider config, resolve placeholders in the API credentials.
+// Implements caddy.Provisioner.
 func (p *Provider) Provision(ctx caddy.Context) error {
-	p.Provider.APIToken = caddy.NewReplacer().ReplaceAll(p.Provider.APIToken, "")
-	return fmt.Errorf("TODO: not implemented")
+	repl := caddy.NewReplacer()
+	p.Provider.SecretId = repl.ReplaceAll(p.Provider.SecretId, "")
+	p.Provider.SecretKey = repl.ReplaceAll(p.Provider.SecretKey, "")
+	p.Provider.SessionToken = repl.ReplaceAll(p.Provider.SessionToken, "")
+	p.Provider.Region = repl.ReplaceAll(p.Provider.Region, "")
+	return nil
 }
-
-// TODO: This is just an example. Update accordingly.
 // UnmarshalCaddyfile sets up the DNS provider from Caddyfile tokens. Syntax:
 //
-// providername [<api_token>] {
-//     api_token <api_token>
-// }
-//
-// **THIS IS JUST AN EXAMPLE AND NEEDS TO BE CUSTOMIZED.**
+//	edgeone {
+//	    secret_id "<secret_id>"
+//	    secret_key "<secret_key>"
+//	    session_token "<session_token>"  // optional
+//	    region "<region>"                // optional
+//	}
 func (p *Provider) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
-		if d.NextArg() {
-			p.Provider.APIToken = d.Val()
-		}
 		if d.NextArg() {
 			return d.ArgErr()
 		}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
-			case "api_token":
-				if p.Provider.APIToken != "" {
-					return d.Err("API token already set")
+			case "secret_id":
+				if d.NextArg() {
+					p.Provider.SecretId = d.Val()
 				}
 				if d.NextArg() {
-					p.Provider.APIToken = d.Val()
+					return d.ArgErr()
+				}
+			case "secret_key":
+				if d.NextArg() {
+					p.Provider.SecretKey = d.Val()
+				}
+				if d.NextArg() {
+					return d.ArgErr()
+				}
+			case "session_token":
+				if d.NextArg() {
+					p.Provider.SessionToken = d.Val()
+				}
+				if d.NextArg() {
+					return d.ArgErr()
+				}
+			case "region":
+				if d.NextArg() {
+					p.Provider.Region = d.Val()
 				}
 				if d.NextArg() {
 					return d.ArgErr()
@@ -63,14 +79,14 @@ func (p *Provider) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		}
 	}
-	if p.Provider.APIToken == "" {
-		return d.Err("missing API token")
+	if p.Provider.SecretId == "" || p.Provider.SecretKey == "" {
+		return d.Err("SecretId and SecretKey are required")
 	}
 	return nil
 }
 
 // Interface guards
 var (
-	_ caddyfile.Unmarshaler = (*Provider)(nil)
-	_ caddy.Provisioner     = (*Provider)(nil)
+    _ caddyfile.Unmarshaler = (*Provider)(nil)
+    _ caddy.Provisioner     = (*Provider)(nil)
 )
